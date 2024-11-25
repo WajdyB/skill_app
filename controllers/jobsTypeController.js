@@ -1,4 +1,5 @@
-const JobType = require('../models/jobTypeModel');
+const JobType = require('../models/jobTypeModel'); // Import JobType Model
+const Job = require('../models/jobModel');  // Import Job model
 const ErrorResponse = require('../utils/errorResponse');
 
 //create job category
@@ -45,15 +46,38 @@ exports.updateJobType = async (req, res, next) => {
 }
 
 
-//delete job type
 exports.deleteJobType = async (req, res, next) => {
     try {
-        const jobT = await JobType.findByIdAndRemove(req.params.type_id);
+        const jobTypeId = req.params.type_id;
+        console.log("Attempting to delete JobType with ID:", jobTypeId);
+
+        // Check if the job type exists
+        const jobType = await JobType.findById(jobTypeId);
+        if (!jobType) {
+            console.log("JobType not found");
+            return next(new ErrorResponse(`Job type with ID ${jobTypeId} not found`, 404));
+        }
+
+        // Check if there are any jobs using this job type
+        const jobsUsingJobType = await Job.find({ jobType: jobTypeId });
+        console.log("Jobs using this JobType:", jobsUsingJobType);
+
+        if (jobsUsingJobType.length > 0) {
+            console.log("Cannot delete job type - jobs are using it");
+            return next(new ErrorResponse(`Cannot delete job type as it is being used by ${jobsUsingJobType.length} job(s)`, 400));
+        }
+
+        // If no jobs are using the job type, delete it
+        console.log("Deleting JobType:", jobType);
+        await JobType.findByIdAndDelete(jobTypeId);
+
         res.status(200).json({
             success: true,
-            message: "Job type deleted"
-        })
+            message: "Job type deleted successfully"
+        });
+
     } catch (error) {
-        next(new ErrorResponse("server error", 500));
+        console.error("Error during deletion:", error);
+        next(error);
     }
-}
+};

@@ -9,8 +9,6 @@ const path = require('path');
 const helmet = require('helmet');
 
 
-
-
 // import routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');

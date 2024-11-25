@@ -51,61 +51,45 @@ exports.updateJob = async (req, res, next) => {
 }
 
 
-//update job by id.
+// show jobs
 exports.showJobs = async (req, res, next) => {
-
-    //enable search 
-    const keyword = req.query.keyword ? {
-        title: {
-            $regex: req.query.keyword,
-            $options: 'i'
-        }
-    } : {}
-
-
-    // filter jobs by category ids
-    let ids = [];
-    const jobTypeCategory = await JobType.find({}, { _id: 1 });
-    jobTypeCategory.forEach(cat => {
-        ids.push(cat._id);
-    })
-
-    let cat = req.query.cat;
-    let categ = cat !== '' ? cat : ids;
-
-
-    //jobs by location
-    let locations = [];
-    const jobByLocation = await Job.find({}, { location: 1 });
-    jobByLocation.forEach(val => {
-        locations.push(val.location);
-    });
-    let setUniqueLocation = [...new Set(locations)];
-    let location = req.query.location;
-    let locationFilter = location !== '' ? location : setUniqueLocation;
-
-
-    //enable pagination
-    const pageSize = 5;
-    const page = Number(req.query.pageNumber) || 1;
-    //const count = await Job.find({}).estimatedDocumentCount();
-    const count = await Job.find({ ...keyword, jobType: categ, location: locationFilter }).countDocuments();
-
     try {
-        const jobs = await Job.find({ ...keyword, jobType: categ, location: locationFilter }).sort({ createdAt: -1 }).populate('jobType', 'jobTypeName').populate('user', 'firstName').skip(pageSize * (page - 1)).limit(pageSize)
+        const { keyword, cat, location, pageNumber = 1 } = req.query;
+        const pageSize = 10; // Adjust page size as needed
+
+        // Build the filter object dynamically
+        let filter = {};
+
+        if (keyword) {
+            filter.title = { $regex: keyword, $options: 'i' }; // Case-insensitive search
+        }
+        if (cat) {
+            filter.jobType = cat;  // assuming jobType is an ObjectId reference
+        }
+        if (location) {
+            filter.location = { $regex: location, $options: 'i' };
+        }
+
+        // Query with pagination
+        const jobs = await Job.find(filter)
+            .skip((pageNumber - 1) * pageSize)
+            .limit(pageSize)
+            .populate('jobType');  // Populating jobType to get full details
+
+        const totalJobs = await Job.countDocuments(filter);  // Get total number of jobs for pagination
+
         res.status(200).json({
             success: true,
             jobs,
-            page,
-            pages: Math.ceil(count / pageSize),
-            count,
-            setUniqueLocation
+            totalJobs,
+            totalPages: Math.ceil(totalJobs / pageSize),
+            currentPage: pageNumber
+        });
 
-        })
     } catch (error) {
         next(error);
     }
-}
+};
 
 
 
