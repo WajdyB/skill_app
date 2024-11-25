@@ -1,6 +1,6 @@
 # Back-End Job Application Application
 
-This is a backend job application platform built using Node.js and MongoDB.
+This is a backend job application built using Node.js and MongoDB.
 
 ## Technologies Used
 
